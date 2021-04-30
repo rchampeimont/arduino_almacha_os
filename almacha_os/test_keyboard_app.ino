@@ -1,5 +1,5 @@
 
-void keyboardTestAppLoop() {
+void keyboardTestAppLoop(void *state) {
   unsigned long key = keyboardReadKey();
   if (key) {
     lcd.clear();
@@ -7,9 +7,14 @@ void keyboardTestAppLoop() {
   }
 }
 
-const struct App keyboardTestAppDefinition = {
+void keyboardTestAppSetup() {
+  lcd.clear();
+  lcd.write("Press any key");
+}
+
+const App keyboardTestAppDefinition = {
 name: "Test keyboard",
-setup: NULL,
+setup: keyboardTestAppSetup,
 loop: keyboardTestAppLoop,
 exit: NULL,
 };

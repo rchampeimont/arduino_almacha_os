@@ -31,10 +31,6 @@ class KatakanaApp {
       selectedPage = 0;
     }
 
-    setup() {
-      Serial.println("Katakana app started.");
-    }
-
     loop() {
       unsigned long key = keyboardReadKey();
       if (key == 0xE074 || key == 0xE072) {
@@ -96,7 +92,7 @@ void katakanaExit(void *appStatePointer) {
   delete ((KatakanaApp *) appStatePointer);
 }
 
-const struct App katakanaAppDefinition = {
+const App katakanaAppDefinition = {
 name: "Katakana",
 setup: katakanaSetup,
 loop: katakanaLoop,

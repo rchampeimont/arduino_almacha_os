@@ -1,10 +1,9 @@
+#ifndef APPLICATIONS_H
+#define APPLICATIONS_H
+
 #include "app.h"
 
-extern const App katakanaAppDefinition;
-extern const App keyboardTestAppDefinition;
+const byte NUMBER_OF_APPLICATIONS = 3;
+extern const App applications[NUMBER_OF_APPLICATIONS];
 
-const byte NUMBER_OF_APPLICATIONS = 2;
-const App applications[] = {
-  katakanaAppDefinition,
-  keyboardTestAppDefinition
-};
+#endif

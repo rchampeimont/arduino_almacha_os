@@ -3,10 +3,11 @@
 #include <LiquidCrystal.h>
 #include "menu.h"
 #include "applications.h"
+#include "keyboard.h"
 
 extern LiquidCrystal lcd;
 extern const int LCD_COLS;
-extern void initKeyboard();
+extern void initLCD();
 
 const char* appNames[NUMBER_OF_APPLICATIONS];
 Menu *mainMenu = NULL;
