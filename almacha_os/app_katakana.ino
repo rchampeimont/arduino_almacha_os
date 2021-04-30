@@ -1,4 +1,5 @@
 #include <LiquidCrystal.h>
+#include "app_katakana.h"
 
 extern const int LCD_COLS;
 
@@ -23,10 +24,17 @@ const char* translations[ARRAY_SIZE] = {
   "Wa", "N",
 };
 
-byte lastSelectedPage = 0xFF;
-byte selectedPage = 0;
 
-void appKatakanaLoop() {
+
+AppKatakana::AppKatakana() {
+  lastSelectedPage = 0xFF;
+  selectedPage = 0;
+}
+
+void AppKatakana::setup() {
+}
+
+void AppKatakana::loop() {
   unsigned long key = keyboardReadKey();
   if (key == 0xE074 || key == 0xE072) {
     // right or down arrow

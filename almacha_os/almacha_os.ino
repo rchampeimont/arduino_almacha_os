@@ -2,6 +2,7 @@
 
 #include <LiquidCrystal.h>
 #include "menu.h"
+#include "app_katakana.h"
 
 extern LiquidCrystal lcd;
 extern void initKeyboard();
@@ -12,6 +13,7 @@ byte previousLoopRunningApp = 0;
 const byte numberOfApps = 3;
 const char* appNames[numberOfApps] = { "Katakana", "coucou", "cheval" };
 Menu *mainMenu = NULL;
+AppKatakana *appKatakana = new AppKatakana();
 
 void setup() {
   // Set up internal LED
@@ -53,7 +55,7 @@ void loop() {
       if (appNeedsInit()) {
         // TODO
       }
-      appKatakanaLoop();
+      appKatakana->loop();
       break;
     default:
       if (! mainMenu) {
