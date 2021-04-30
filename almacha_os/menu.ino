@@ -1,12 +1,17 @@
 #include "menu.h"
 
-Menu::Menu(const char * const* choices, byte numberOfChoices) {
+Menu::Menu(const char * const* choices, byte numberOfChoices, const char *title) {
   this->choices = choices;
   this->numberOfChoices = numberOfChoices;
   this->title = title;
   currentSelection = 0;
   previousSelection = 0xFF;
   selectionMade = false;
+}
+
+void Menu::setup() {
+  lcd.clear();
+  lcd.print(title);
 }
 
 void Menu::loop() {
@@ -36,16 +41,15 @@ void Menu::loop() {
 }
 
 void Menu::printPage() {
-  lcd.clear();
-  for (byte i=0; i<LCD_ROWS && i<numberOfChoices; i++) {
-    lcd.setCursor(0, i);
-    if (i == 0) {
-      lcd.write("\x7E "); // 0x7E is right arrow
-    } else {
-      lcd.write("  ");
-    }
-    lcd.print(choices[(currentSelection + i) % numberOfChoices]);
+  lcd.setCursor(0, 1);
+  for (byte i=0; i<LCD_COLS; i++) {
+    lcd.write(" ");
   }
+  lcd.setCursor(0, 1);
+  lcd.write("\x7E ");
+  lcd.print(currentSelection+1);
+  lcd.write(" ");
+  lcd.print(choices[currentSelection]);
 }
 
 byte Menu::getSelectionMade() {

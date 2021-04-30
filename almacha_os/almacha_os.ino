@@ -44,17 +44,21 @@ void loop() {
   unsigned long key = keyboardOSReadKey();
   if (key == 0x76) {
     // Escape pressed, go back to main menu
-    Serial.println("OS: Escape pressed. Going back to main menu.");
+    Serial.println("OS: Escape key pressed. Going back to main menu.");
     runningApp = 0xff;
   }
   
   switch (runningApp) {
     case 0:
+      if (appNeedsInit()) {
+        // TODO
+      }
       appKatakanaLoop();
       break;
     default:
       if (appNeedsInit()) {
-        mainMenu = new Menu(appNames, numberOfApps);
+        mainMenu = new Menu(appNames, numberOfApps, "Select app:");
+        mainMenu->setup();
       }
       mainMenu->loop();
       int selection = mainMenu->getSelectionMade();

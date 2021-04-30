@@ -3,7 +3,8 @@
 
 class Menu {
   public:
-    Menu(const char * const* choices, byte numberOfChoices);
+    Menu(const char * const* choices, byte numberOfChoices, const char *title);
+    void setup();
     void loop();
     byte getSelectionMade();
 
