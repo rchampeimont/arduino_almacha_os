@@ -6,6 +6,5 @@ void initLCD() {
   // Init LCD screen
   Serial.print("Initializing LCD screen... ");
   lcd.begin(LCD_COLS, LCD_ROWS);
-  lcd.clear();
   Serial.println("OK");
 }

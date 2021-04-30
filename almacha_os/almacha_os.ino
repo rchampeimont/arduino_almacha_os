@@ -2,16 +2,16 @@
 
 #include <LiquidCrystal.h>
 #include "menu.h"
-#include "app_katakana.h"
+#include "applications.h"
 
 extern LiquidCrystal lcd;
 extern const int LCD_COLS;
 extern void initKeyboard();
 
-const byte numberOfApps = 3;
-const char* appNames[numberOfApps] = { "Katakana", "coucou", "cheval" };
+const char* appNames[NUMBER_OF_APPLICATIONS];
 Menu *mainMenu = NULL;
-AppKatakana *runningApp = NULL;
+App *runningApp = NULL;
+void* appStatePointer = NULL;
 
 void setup() {
   // Set up internal LED
@@ -26,54 +26,69 @@ void setup() {
   initLCD();
   initKeyboard();
 
-  // Welcome message
-  lcd.home();
-  lcd.write("Welcome to");
-  lcd.setCursor(LCD_COLS-10, 1);
-  lcd.write("Almacha OS");
-  delay(2000);
+  // Get app names
+  for (byte i=0; i<NUMBER_OF_APPLICATIONS; i++) {
+    appNames[i] = applications[i].name;
+  }
 
   // Report system ready
   Serial.println("System ready.");
+
+  // Welcome message
+  lcd.write("Welcome to");
+  lcd.setCursor(LCD_COLS-10, 1);
+  lcd.write("Almacha OS");
+  delay(1500);
+
   digitalWrite(LED_BUILTIN, LOW);
 }
 
 void startApp(byte selectedApp) {
-  Serial.print("OS: Starting app ");
-  Serial.println(selectedApp);
+  runningApp = &applications[selectedApp];
+  
+  Serial.print("OS: Starting app: ");
+  Serial.println(runningApp->name);
 
-  if (selectedApp == 0) {
-    runningApp = new AppKatakana();
+  Serial.print("OS: Running app setup... ");
+  if (runningApp->setup) {
+    appStatePointer = runningApp->setup();
+    Serial.println("OK");
   } else {
-    return;
+    appStatePointer = NULL;
+    Serial.println("no setup provided");
   }
-
-  runningApp->setup();
 }
 
 void stopApp() {
-  Serial.println("OS: Escape key pressed. Exiting app.");
-  delete runningApp;
+  Serial.print("OS: Escape key pressed. Exiting app... ");
+  if (runningApp->exit) {
+    runningApp->exit(appStatePointer);
+    Serial.println("OK");
+  } else {
+    Serial.println("no exit procedure needed");
+  }
+  
   runningApp = NULL;
+  appStatePointer = NULL;
 }
 
 void loop() {
+  // Read keyboard input
+  unsigned long key = keyboardOSReadKey();
+  
   if (runningApp) {
     // We are in an app
-
-    // Detect if ESC is pressed to exit app
-    unsigned long key = keyboardOSReadKey();
     if (key == 0x76) {
       // Escape pressed, so stop app
       stopApp();
+    } else {
+      // Run app loop
+      runningApp->loop(appStatePointer);
     }
-
-    // Run app loop
-    runningApp->loop();
   } else {
     // We are main menu
     if (! mainMenu) {
-      mainMenu = new Menu(appNames, numberOfApps, "Select app:");
+      mainMenu = new Menu(appNames, NUMBER_OF_APPLICATIONS, "Select app:");
       mainMenu->setup();
     }
     mainMenu->loop();

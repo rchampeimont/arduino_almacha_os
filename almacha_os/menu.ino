@@ -48,7 +48,7 @@ void Menu::printPage() {
   lcd.setCursor(0, 1);
   lcd.write("\x7E ");
   lcd.print(currentSelection+1);
-  lcd.write(" ");
+  lcd.write(". ");
   lcd.print(choices[currentSelection]);
 }
 
