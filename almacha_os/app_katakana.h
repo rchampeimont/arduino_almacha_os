@@ -1,7 +1,9 @@
 #ifndef APP_KATAKANA_H
 #define APP_KATAKANA_H
 
-class AppKatakana {
+#include "app.h"
+
+class AppKatakana: public App {
   public:
     AppKatakana();
     void setup();

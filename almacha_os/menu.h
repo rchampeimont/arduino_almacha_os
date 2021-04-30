@@ -6,6 +6,8 @@ class Menu {
     Menu(const char * const* choices, byte numberOfChoices, const char *title);
     void setup();
     void loop();
+
+    // Returns selected value if any, otherwise 0xff
     byte getSelectionMade();
 
   private:
