@@ -58,6 +58,9 @@ void startApp(byte selectedApp) {
     appStatePointer = NULL;
     Serial.println("no setup provided");
   }
+
+  // Clear possible pending key to read (to prevent app from reading a pending ENTER for instancee)
+  keyboardReadKey();
 }
 
 void stopApp() {
