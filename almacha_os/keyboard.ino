@@ -103,20 +103,6 @@ void processKeyboardInterrupt() {
   //delayMicroseconds(50);
 }
 
-const char *getKeyboardError() {
-  switch (keyboardErrorStatus) {
-    case 'S':
-      return "START bit was 1 while 0 was expected";
-    case 'E':
-      return "END bit was 0 while 1 was expected";
-    case 'P':
-      return "PARITY was incorrect";
-    case 0:
-      return "no error";
-    default:
-      return "unknown error";
-  }
-}
 
 void processKeyboard11BitCode(int keycode) {
   // Add keycode to buffer
@@ -131,7 +117,7 @@ void processKeyboard11BitCode(int keycode) {
 void reportKeyboardError() {
   // print debug information to serial
   Serial.print("Keyboard error: ");
-  Serial.write(getKeyboardError());
+  Serial.write(keyboardErrorStatus);
   Serial.println("");
   Serial.println("Latest keyboard interrupt timing deltas in microseconds (most recent first):");
   for (int i = 1; i <= KEYBOARD_INTERRUPT_DELTA_ARRAY_SIZE; i++) {
