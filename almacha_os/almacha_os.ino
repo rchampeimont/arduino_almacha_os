@@ -5,6 +5,7 @@
 #include "app_katakana.h"
 
 extern LiquidCrystal lcd;
+extern const int LCD_COLS;
 extern void initKeyboard();
 
 const byte numberOfApps = 3;
@@ -25,9 +26,14 @@ void setup() {
   initLCD();
   initKeyboard();
 
-  // Report system ready
+  // Welcome message
   lcd.home();
-  lcd.print("System ready.");
+  lcd.write("Welcome to");
+  lcd.setCursor(LCD_COLS-10, 1);
+  lcd.write("Almacha OS");
+  delay(2000);
+
+  // Report system ready
   Serial.println("System ready.");
   digitalWrite(LED_BUILTIN, LOW);
 }
