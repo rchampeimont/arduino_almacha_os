@@ -1,4 +1,3 @@
-// Copyright 2021 Raphael Champeimont
 
 volatile byte keyboardBitCounter = 0;
 volatile byte incompleteKeycode = 0;
@@ -14,8 +13,8 @@ volatile byte keyboardBuffer[KEYBOARD_BUFFER_SIZE];
 volatile byte keyboardBufferIndex = 0;
 volatile byte keyboardErrorStatus = 0;
 
-volatile byte keyCodeCounter = 0;
-byte lastReadKeyCodeCounter = 0;
+volatile bool unreadKey = false;
+volatile bool unreadKeyByOS = false;
 volatile unsigned long lastCombinedCode = 0;
 
 const long AUTOMATIC_RESET_AFTER = 200; // microseconds
@@ -100,7 +99,8 @@ void processKeyboard11BitCode() {
   unsigned long combinedCode = tryCombineCodes();
   if (combinedCode) {
     lastCombinedCode = combinedCode;
-    keyCodeCounter++;
+    unreadKey = true;
+    unreadKeyByOS = true;
   }
 }
 
@@ -153,12 +153,17 @@ void initKeyboard() {
   Serial.println("OK");
 }
 
-unsigned long _keyboardReadKey() {
-  if (keyCodeCounter != lastReadKeyCodeCounter) {
-    lastReadKeyCodeCounter = keyCodeCounter;
+// Reads key and marks it as read
+unsigned long keyboardReadKey() {
+  if (unreadKey) {
+    unreadKey = false;
     // Disable interrupts to read reliably a >1 byte variable modified by an ISR
     noInterrupts();
     unsigned long code = lastCombinedCode;
+    if (code) {
+      Serial.print("Keyboard key read: ");
+      Serial.println(code, HEX);
+    }
     interrupts();
     return code;
   } else {
@@ -167,11 +172,21 @@ unsigned long _keyboardReadKey() {
   }
 }
 
-unsigned long keyboardReadKey() {
-  unsigned long keycode = _keyboardReadKey();
-  if (keycode) {
-    Serial.print("Keyboard key read: ");
-    Serial.println(keycode, HEX);
+// For OS only, it does not flag the key as read, to let an app read it
+unsigned long keyboardOSReadKey() {
+  if (unreadKeyByOS) {
+    unreadKeyByOS = false;
+    // Disable interrupts to read reliably a >1 byte variable modified by an ISR
+    noInterrupts();
+    unsigned long code = lastCombinedCode;
+    if (code) {
+      Serial.print("Keyboard key read by OS: ");
+      Serial.println(code, HEX);
+    }
+    interrupts();
+    return code;
+  } else {
+    // Now new keycodes have been received since last function call
+    return 0;
   }
-  return keycode;
 }
