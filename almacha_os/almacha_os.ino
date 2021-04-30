@@ -56,7 +56,7 @@ void loop() {
       appKatakanaLoop();
       break;
     default:
-      if (appNeedsInit()) {
+      if (! mainMenu) {
         mainMenu = new Menu(appNames, numberOfApps, "Select app:");
         mainMenu->setup();
       }
