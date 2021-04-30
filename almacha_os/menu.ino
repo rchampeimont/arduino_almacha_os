@@ -1,6 +1,6 @@
 #include "menu.h"
 
-Menu::Menu(const char * const* choices, byte numberOfChoices, const char *title) {
+Menu::Menu(const char * const* choices, byte numberOfChoices) {
   this->choices = choices;
   this->numberOfChoices = numberOfChoices;
   this->title = title;
