@@ -2,9 +2,6 @@
 
 extern const int LCD_COLS;
 
-// Connections to the circuit: potentiometer
-const int SELECTOR_PIN = A0;
-
 const int ARRAY_SIZE = 56;
 const int KANAS_PER_PAGE = 4;
 const int CHARS_PER_KANA = 4;
@@ -49,9 +46,6 @@ void appKatakanaLoop() {
     // page changed
     Serial.println("Katakana page changed");
     lastSelectedPage = selectedPage;
-
-    // Switch on internal LED for debug
-    digitalWrite(LED_BUILTIN, HIGH);
     
     lcd.clear();
 
@@ -68,8 +62,5 @@ void appKatakanaLoop() {
     int pageNumber = selectedPage + 1;
     lcd.setCursor(LCD_COLS - (pageNumber < 10 ? 1 : 2), 1);
     lcd.print(pageNumber, DEC);
-
-    // Switch off internal LED for debug
-    digitalWrite(LED_BUILTIN, LOW);
   }
 }

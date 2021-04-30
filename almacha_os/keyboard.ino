@@ -1,10 +1,5 @@
 // Copyright 2021 Raphael Champeimont
 
-#include <LiquidCrystal.h>
-
-byte lastReportedKeyboardInterruptCounter = 0;
-
-volatile byte keyboardInterruptCounter = 0;
 volatile byte keyboardBitCounter = 0;
 volatile byte incompleteKeycode = 0;
 
@@ -14,13 +9,14 @@ const byte KEYBOARD_INTERRUPT_DELTA_ARRAY_SIZE = 15;
 volatile byte keyboardInterruptDeltas[KEYBOARD_INTERRUPT_DELTA_ARRAY_SIZE];
 
 
-const byte KEYBOARD_BUFFER_SIZE = 8;
+const byte KEYBOARD_BUFFER_SIZE = 4;
 volatile byte keyboardBuffer[KEYBOARD_BUFFER_SIZE];
 volatile byte keyboardBufferIndex = 0;
 volatile byte keyboardErrorStatus = 0;
 
 volatile byte keyCodeCounter = 0;
 byte lastReadKeyCodeCounter = 0;
+volatile unsigned long lastCombinedCode = 0;
 
 const long AUTOMATIC_RESET_AFTER = 200; // microseconds
 
@@ -82,7 +78,7 @@ void processKeyboardInterrupt() {
     // All 11 bits have been received.
     if (! keyboardErrorStatus) {
       // process received byte if every check passed
-      processKeyboard11BitCode(incompleteKeycode);
+      processKeyboard11BitCode();
     }
     // Reset to read next 11-bit chunk
     incompleteKeycode = 0;
@@ -90,27 +86,47 @@ void processKeyboardInterrupt() {
   } else {
     keyboardBitCounter++;
   }
-
-  keyboardInterruptCounter++;
-
-  // The delay prevents reading extra artefact bits.
-  // We could do without it at the price of a few errors once in a while (like 1% of reads).
-  // Tested values:
-  // (my test keyboard has a clock period of around 90 usec, standard says it is between 60 and 100)
-  // <=25 avoids most errors but can sometimes fail
-  // 30-70 avoid all errors
-  // >=80 fails because it we miss bits
-  //delayMicroseconds(50);
 }
 
 
-void processKeyboard11BitCode(int keycode) {
+void processKeyboard11BitCode() {
   // Add keycode to buffer
-  keyboardBuffer[keyboardBufferIndex] = keycode;
+  keyboardBuffer[keyboardBufferIndex] = incompleteKeycode;
   keyboardBufferIndex++;
-  keyCodeCounter++;
   if (keyboardBufferIndex >= KEYBOARD_BUFFER_SIZE) {
     keyboardBufferIndex = 0;
+  }
+  
+  unsigned long combinedCode = tryCombineCodes();
+  if (combinedCode) {
+    lastCombinedCode = combinedCode;
+    keyCodeCounter++;
+  }
+}
+
+unsigned long tryCombineCodes() {
+  byte n1 = keyboardBuffer[(keyboardBufferIndex - 1 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
+  byte n2 = keyboardBuffer[(keyboardBufferIndex - 2 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
+  byte n3 = keyboardBuffer[(keyboardBufferIndex - 3 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
+  
+  if (n1 == 0xE0 || n1 == 0xF0) {
+    // unfinished code
+    return 0;
+  } else if (n2 == 0xF0) {
+    // key released
+    if (n3 == 0xE0) {
+      // extended key
+      return n1 | 0xE0F000;
+    } else {
+      // regular key
+      return n1 | 0xF000;
+    }
+  } else if (n2 == 0xE0) {
+    // extended key pressed
+    return n1 | 0xE000;
+  } else {
+    // regular key pressed
+    return n1;
   }
 }
 
@@ -118,55 +134,18 @@ void reportKeyboardError() {
   // print debug information to serial
   Serial.print("Keyboard error: ");
   Serial.write(keyboardErrorStatus);
-  Serial.println("");
-  Serial.println("Latest keyboard interrupt timing deltas in microseconds (most recent first):");
-  for (int i = 1; i <= KEYBOARD_INTERRUPT_DELTA_ARRAY_SIZE; i++) {
-    int delta = keyboardInterruptDeltas[(keyboardInterruptDeltasIndex - i + KEYBOARD_INTERRUPT_DELTA_ARRAY_SIZE) % KEYBOARD_INTERRUPT_DELTA_ARRAY_SIZE];
-    if (delta == 255) {
-      // we store any value >= 255 as 255
-      Serial.print(">254");
-    } else {
-      Serial.print(delta);
-    }
-    Serial.print(" ");
-  }
-  Serial.println("");
-  Serial.print("Partially read key code: ");
+  Serial.print(" / Partially read key code: ");
   Serial.println(incompleteKeycode, BIN);
-  Serial.println("");
-}
-
-void reportKeyboardRawData() {
-  if (lastReportedKeyboardInterruptCounter != keyboardInterruptCounter) {
-    lastReportedKeyboardInterruptCounter = keyboardInterruptCounter;
-
-    // print last bytes received on serial in hex
-    for (int i = 1; i <= KEYBOARD_BUFFER_SIZE; i++) {
-      Serial.print(keyboardBuffer[(keyboardBufferIndex - i + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE], HEX);
-      Serial.print(" ");
-    }
-    Serial.println("");
-
-    // print last bytes received on serial in binary
-    for (int i = 1; i <= KEYBOARD_BUFFER_SIZE; i++) {
-      Serial.print(keyboardBuffer[(keyboardBufferIndex - i + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE], BIN);
-      Serial.print(" ");
-    }
-    Serial.println("");
-  }
 }
 
 
 void initKeyboard() {
   Serial.print("Initializing keyboard... ");
   
-  // actual keyboard stuff
   for (int i = 0; i < KEYBOARD_BUFFER_SIZE; i++) {
     keyboardBuffer[i] = 0;
   }
-  for (int i = 0; i < KEYBOARD_INTERRUPT_DELTA_ARRAY_SIZE; i++) {
-    keyboardInterruptDeltas[i] = 0;
-  }
+
   pinMode(PS2_KEYBOARD_CLOCK_PIN, INPUT);
   pinMode(PS2_KEYBOARD_DATA_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(PS2_KEYBOARD_CLOCK_PIN), processKeyboardInterrupt, FALLING);
@@ -177,28 +156,11 @@ void initKeyboard() {
 unsigned long _keyboardReadKey() {
   if (keyCodeCounter != lastReadKeyCodeCounter) {
     lastReadKeyCodeCounter = keyCodeCounter;
-    byte n1 = keyboardBuffer[(keyboardBufferIndex - 1 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
-    byte n2 = keyboardBuffer[(keyboardBufferIndex - 2 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
-    byte n3 = keyboardBuffer[(keyboardBufferIndex - 3 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
-    if (n1 == 0xE0 || n1 == 0xF0) {
-      // unfinished code
-      return 0;
-    } else if (n2 == 0xF0) {
-      // key released
-      if (n3 == 0xE0) {
-        // extended key
-        return n1 | 0xE0F000;
-      } else {
-        // regular key
-        return n1 | 0xF000;
-      }
-    } else if (n2 == 0xE0) {
-      // extended key pressed
-      return n1 | 0xE000;
-    } else {
-      // regular key pressed
-      return n1;
-    }
+    // Disable interrupts to read reliably a >1 byte variable modified by an ISR
+    noInterrupts();
+    unsigned long code = lastCombinedCode;
+    interrupts();
+    return code;
   } else {
     // Now new keycodes have been received since last function call
     return 0;
