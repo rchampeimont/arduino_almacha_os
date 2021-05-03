@@ -92,6 +92,10 @@ void loop() {
   } else {
     // We are main menu
     if (! mainMenu) {
+      // We just came back from an app to the main menu.
+      // Reset LCD screen, which allows to recover usage
+      // of the LCD screen if it got disconnected or dysfunctionned.
+      initLCD();
       mainMenu = new Menu(appNames, NUMBER_OF_APPLICATIONS, "Select app:");
       mainMenu->setup();
     }
