@@ -1,5 +1,5 @@
 // PS/2 keyboard connections
-const int PS2_KEYBOARD_CLOCK_PIN = 2; // pin most support interrupts
+const int PS2_KEYBOARD_CLOCK_PIN = 2; // pin must support interrupts
 const int PS2_KEYBOARD_DATA_PIN = 3; // digital input pin
 
 // Connections to the circuit: LCD screen
