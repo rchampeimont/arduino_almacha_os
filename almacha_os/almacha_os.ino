@@ -25,6 +25,11 @@ void setup() {
   Serial.println("Starting system...");
 
   initLCD();
+
+  lcd.home();
+  lcd.write("Trying to detect");
+  lcd.setCursor(0, 1);
+  lcd.write("keyboard...");
   initKeyboard();
 
   // Get app names
@@ -33,6 +38,7 @@ void setup() {
   }
 
   // Welcome message
+  lcd.clear();
   lcd.write("Welcome to");
   lcd.setCursor(LCD_COLS - 10, 1);
   lcd.write("Almacha OS");
