@@ -88,7 +88,7 @@ class MurasakiApp {
           selectedDiceIndex--;
         }
         selectDice();
-      } else if (key == 0xF05A) {
+      } else if (key == 0x5A) {
         rollDice();
       }
       updateMurasakiClock();

@@ -12,7 +12,7 @@ class BouleDeCrystal {
     void loop() {
       unsigned long key = keyboardReadKey();
 
-      if (key == 0xF05A) {
+      if (key == 0x5A) {
         reply = random(8);
         lcd.clear();
         lcd.setCursor(0, 0);
