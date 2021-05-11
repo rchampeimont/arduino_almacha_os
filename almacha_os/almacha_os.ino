@@ -28,25 +28,25 @@ void setup() {
   initKeyboard();
 
   // Get app names
-  for (byte i=0; i<NUMBER_OF_APPLICATIONS; i++) {
+  for (byte i = 0; i < NUMBER_OF_APPLICATIONS; i++) {
     appNames[i] = applications[i].name;
   }
 
-  // Report system ready
-  Serial.println("System ready.");
-
   // Welcome message
   lcd.write("Welcome to");
-  lcd.setCursor(LCD_COLS-10, 1);
+  lcd.setCursor(LCD_COLS - 10, 1);
   lcd.write("Almacha OS");
   delay(1500);
 
   digitalWrite(LED_BUILTIN, LOW);
+
+  // Report system ready
+  Serial.println("System ready.");
 }
 
 void startApp(byte selectedApp) {
   runningApp = &applications[selectedApp];
-  
+
   Serial.print("OS: Starting app: ");
   Serial.println(runningApp->name);
 
@@ -71,7 +71,7 @@ void stopApp() {
   } else {
     Serial.println("no exit procedure needed");
   }
-  
+
   runningApp = NULL;
   appStatePointer = NULL;
 }
@@ -79,7 +79,7 @@ void stopApp() {
 void loop() {
   // Read keyboard input
   unsigned long key = keyboardOSReadKey();
-  
+
   if (runningApp) {
     // We are in an app
     if (key == 0x76) {

@@ -18,6 +18,7 @@ volatile bool unreadKeyByOS = false;
 volatile unsigned long lastCombinedCode = 0;
 
 volatile bool numLock = false;
+volatile bool currentlySettingLEDs = false;
 
 const long AUTOMATIC_RESET_AFTER = 200; // microseconds
 
@@ -97,46 +98,65 @@ void processKeyboard11BitCode() {
   if (keyboardBufferIndex >= KEYBOARD_BUFFER_SIZE) {
     keyboardBufferIndex = 0;
   }
-  
+
   unsigned long combinedCode = tryCombineCodes();
   if (combinedCode) {
-    lastCombinedCode = combinedCode;
-    unreadKey = true;
-    unreadKeyByOS = true;
-    if (combinedCode == 0xF077) {
-      // Num Lock has been pressed
+    if (combinedCode == 0x77) {
+      // Num Lock has been pressed -> ignore it (we react on released key)
+    } else if (combinedCode == 0xF077) {
+      // Num Lock has been released
       toggleNumLock();
+    } else if (combinedCode == 0xFA) {
+      ackReceivedFromKeyboard();
+    } else if (combinedCode == 0xAA) {
+      Serial.println("Keyboard successfully initialized.");
+    } else {
+      lastCombinedCode = combinedCode;
+      unreadKey = true;
+      unreadKeyByOS = true;
     }
   }
 }
 
 // called from an Interrupt Service Routine
 void toggleNumLock() {
-
-  
+  numLock = ! numLock;
   Serial.print("Keyboard: Num lock was pressed, new state is: ");
   Serial.println(numLock);
-  numLock = ! numLock;
+  
+  // Tell the keyboard we want to change LED state
+  currentlySettingLEDs = true;
+  sendToKeyboard(0xED);
+}
 
-  // Ask the keyboard to switch Num Lock LED on or off
-  sendToKeyboard(0xFF);
+// called from Interrupt Service Routine
+void ackReceivedFromKeyboard() {
+  Serial.println("Keyboard acknowledged command.");
+  if (currentlySettingLEDs) {
+    // The ACK from the keyboard is in response to a 0xED (request to change LEDs)
+    // Send new LED status
+    sendToKeyboard(numLock ? 0x02 : 0);
+    currentlySettingLEDs = false;
+  }
 }
 
 // This function send data back to the keyboard.
 // It may be called from an Interrupt Service Routine.
 void sendToKeyboard(byte valueToWrite) {
+  Serial.print("Sending to keyboard: 0x");
+  Serial.println(valueToWrite, HEX);
   // I used https://www.avrfreaks.net/sites/default/files/PS2%20Keyboard.pdf to implement that
-  
-  byte currentBit = 0;
+
+  byte clockCycle = 0;
   byte previousClockState = 1;
   byte clockState = 0;
   byte parity = 0;
 
   // Compute parity
-  for (byte i=0; i<8; i++) {
+  for (byte i = 0; i < 8; i++) {
     parity += (valueToWrite >> i) & 1;
   }
-  
+
   // Pull clock low
   pinMode(PS2_KEYBOARD_CLOCK_PIN, OUTPUT);
   digitalWrite(PS2_KEYBOARD_CLOCK_PIN, LOW);
@@ -147,35 +167,27 @@ void sendToKeyboard(byte valueToWrite) {
   // Release clock
   pinMode(PS2_KEYBOARD_CLOCK_PIN, INPUT_PULLUP);
   // Wait for keyboard to pull clock low, which indicates that we shoud set data line
-  while (true) {
+  while (clockCycle < 11) {
     clockState = digitalRead(PS2_KEYBOARD_CLOCK_PIN);
+    // Detect falling edge
     if (clockState != previousClockState && clockState == 0) {
-      // The device expect us to set the data line high/low to transmit a bit
-      if (currentBit < 8) {
-        digitalWrite(PS2_KEYBOARD_DATA_PIN, (valueToWrite >> currentBit) & 1);
-      } else if (currentBit == 8) {
+      if (clockCycle < 8) {
+        digitalWrite(PS2_KEYBOARD_DATA_PIN, (valueToWrite >> clockCycle) & 1);
+      } else if (clockCycle == 8) {
         // send parity bit
         digitalWrite(PS2_KEYBOARD_DATA_PIN, parity % 2 == 1 ? LOW : HIGH);
-      } else if (currentBit == 9) {
-        // end bit
-        digitalWrite(PS2_KEYBOARD_DATA_PIN, HIGH);
-      } else { // currentBit == 10
-        // This last lock cycle tells us that we shoud end transmission
-        break;
+      } else if (clockCycle == 9) {
+        // Release data line
+        pinMode(PS2_KEYBOARD_DATA_PIN, INPUT_PULLUP);
+      } else if (clockCycle == 10) {
+        if (digitalRead(PS2_KEYBOARD_DATA_PIN) != LOW) {
+          Serial.println("Keyboard did not ACK our command correctly");
+        }
       }
-      currentBit++;
+      clockCycle++;
     }
-    previousClockState = ! previousClockState;
+    previousClockState = clockState;
   }
-  // Release data line
-  pinMode(PS2_KEYBOARD_DATA_PIN, INPUT_PULLUP);
-  // Wait for the device to bring Data low
-  while (digitalRead(PS2_KEYBOARD_DATA_PIN) != LOW);
-  // Wait for the device to bring Clock low.
-  while (digitalRead(PS2_KEYBOARD_CLOCK_PIN) != LOW);
-  // Wait for the device to release Data and Clock
-  while (digitalRead(PS2_KEYBOARD_DATA_PIN) != HIGH);
-  while (digitalRead(PS2_KEYBOARD_CLOCK_PIN) != HIGH);
 }
 
 // called from an Interrupt Service Routine
@@ -183,7 +195,7 @@ unsigned long tryCombineCodes() {
   byte n1 = keyboardBuffer[(keyboardBufferIndex - 1 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
   byte n2 = keyboardBuffer[(keyboardBufferIndex - 2 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
   byte n3 = keyboardBuffer[(keyboardBufferIndex - 3 + KEYBOARD_BUFFER_SIZE) % KEYBOARD_BUFFER_SIZE];
-  
+
   if (n1 == 0xE0 || n1 == 0xF0) {
     // unfinished code
     return 0;
@@ -215,8 +227,8 @@ void reportKeyboardError() {
 
 
 void initKeyboard() {
-  Serial.print("Initializing keyboard... ");
-  
+  Serial.println("Initializing keyboard");
+
   for (int i = 0; i < KEYBOARD_BUFFER_SIZE; i++) {
     keyboardBuffer[i] = 0;
   }
@@ -229,8 +241,6 @@ void initKeyboard() {
   sendToKeyboard(0xFF); // 0xFF means RESET
     
   attachInterrupt(digitalPinToInterrupt(PS2_KEYBOARD_CLOCK_PIN), processKeyboardInterrupt, FALLING);
-
-  Serial.println("OK");
 }
 
 // Reads key and marks it as read
