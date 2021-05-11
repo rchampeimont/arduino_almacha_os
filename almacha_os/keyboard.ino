@@ -158,13 +158,13 @@ unsigned long keyboardReadKey() {
   if (unreadKey) {
     unreadKey = false;
     // Disable interrupts to read reliably a >1 byte variable modified by an ISR
-    noInterrupts();
+    //noInterrupts();
     unsigned long code = lastCombinedCode;
     if (code) {
       Serial.print("Keyboard key read: ");
       Serial.println(code, HEX);
     }
-    interrupts();
+    //interrupts();
     return code;
   } else {
     // Now new keycodes have been received since last function call
@@ -177,13 +177,13 @@ unsigned long keyboardOSReadKey() {
   if (unreadKeyByOS) {
     unreadKeyByOS = false;
     // Disable interrupts to read reliably a >1 byte variable modified by an ISR
-    noInterrupts();
+    //noInterrupts();
     unsigned long code = lastCombinedCode;
     if (code) {
       Serial.print("Keyboard key read by OS: ");
       Serial.println(code, HEX);
     }
-    interrupts();
+    //interrupts();
     return code;
   } else {
     // Now new keycodes have been received since last function call
