@@ -17,7 +17,7 @@ volatile bool unreadKey = false;
 volatile bool unreadKeyByOS = false;
 volatile unsigned long lastCombinedCode = 0;
 
-volatile bool numLock = false;
+volatile byte lockState = 0x0; // num/caps/scroll lock state
 volatile bool currentlySettingLEDs = false;
 
 const long AUTOMATIC_RESET_AFTER = 200; // microseconds
@@ -101,29 +101,32 @@ void processKeyboard11BitCode() {
 
   unsigned long combinedCode = tryCombineCodes();
   if (combinedCode) {
-    if (combinedCode == 0x77) {
-      // Num Lock has been pressed -> ignore it (we react on released key)
-    } else if (combinedCode == 0xF077) {
-      // Num Lock has been released
-      toggleNumLock();
+    if (combinedCode == 0x7E) {
+      // Scroll Lock
+      toggleLock(0x01);
+    } else if (combinedCode == 0x77) {
+      // Num Lock
+      toggleLock(0x02);
+    } else if (combinedCode == 0x58) {
+      // Caps Lock
+      toggleLock(0x04);
     } else if (combinedCode == 0xFA) {
       ackReceivedFromKeyboard();
     } else if (combinedCode == 0xAA) {
       Serial.println("Keyboard successfully initialized.");
-    } else {
-      lastCombinedCode = combinedCode;
-      unreadKey = true;
-      unreadKeyByOS = true;
     }
+    lastCombinedCode = combinedCode;
+    unreadKey = true;
+    unreadKeyByOS = true;
   }
 }
 
 // called from an Interrupt Service Routine
-void toggleNumLock() {
-  numLock = ! numLock;
-  Serial.print("Keyboard: Num lock was pressed, new state is: ");
-  Serial.println(numLock);
-  
+void toggleLock(byte flags) {
+  lockState = lockState ^ flags;
+  Serial.print("Keyboard: A lock key was pressed, new state is: ");
+  Serial.println(lockState, BIN);
+
   // Tell the keyboard we want to change LED state
   currentlySettingLEDs = true;
   sendToKeyboard(0xED);
@@ -135,7 +138,7 @@ void ackReceivedFromKeyboard() {
   if (currentlySettingLEDs) {
     // The ACK from the keyboard is in response to a 0xED (request to change LEDs)
     // Send new LED status
-    sendToKeyboard(numLock ? 0x02 : 0);
+    sendToKeyboard(lockState);
     currentlySettingLEDs = false;
   }
 }
@@ -239,7 +242,7 @@ void initKeyboard() {
 
   // Tell keyboard to reset
   sendToKeyboard(0xFF); // 0xFF means RESET
-    
+
   attachInterrupt(digitalPinToInterrupt(PS2_KEYBOARD_CLOCK_PIN), processKeyboardInterrupt, FALLING);
 }
 
@@ -279,4 +282,9 @@ unsigned long keyboardOSReadKey() {
     // Now new keycodes have been received since last function call
     return 0;
   }
+}
+
+// Get caps/num/scroll lock state
+byte keyboardGetLockState() {
+  return lockState;
 }

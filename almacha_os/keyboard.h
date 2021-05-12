@@ -3,5 +3,6 @@
 
 extern void initKeyboard();
 unsigned long keyboardOSReadKey();
+byte keyboardGetLockState();
 
 #endif

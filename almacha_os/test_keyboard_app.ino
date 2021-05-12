@@ -4,6 +4,9 @@ void keyboardTestAppLoop(void *state) {
   if (key) {
     lcd.clear();
     lcd.print(key, HEX);
+    lcd.setCursor(0, 1);
+    lcd.write("locks state: ");
+    lcd.print(keyboardGetLockState(), BIN);
   }
 }
 
