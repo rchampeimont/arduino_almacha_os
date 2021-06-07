@@ -5,4 +5,6 @@ I combined several mini-apps I have created in a single LCD+keyboard system.
 
 YouTube video showing the result: https://www.youtube.com/watch?v=0EDg0OzHr_8
 
-![Circuit](/images/circuit.jpg?raw=true)
+![Overview](/images/photo.jpg?raw=true)
+
+![Circuit schematic](/images/schematic.jpg?raw=true)
