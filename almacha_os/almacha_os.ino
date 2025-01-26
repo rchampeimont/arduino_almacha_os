@@ -1,4 +1,4 @@
-// Copyright 2021 Raphael Champeimont
+// Copyright 2021 River Champeimont
 
 #include <LiquidCrystal.h>
 #include "menu.h"
